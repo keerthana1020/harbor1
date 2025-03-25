@@ -1,4 +1,4 @@
-apiVersion: v2
+apiVersion: v1
 name: harbor
 description: A Helm chart for deploying Harbor with PostgreSQL, Redis, Trivy, and Jobservice
 version: 1.0.0
