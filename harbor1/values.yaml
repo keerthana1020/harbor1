@@ -1,0 +1,66 @@
+# Global configuration
+global:
+  storageClass: gp3-csi
+  serviceType: LoadBalancer
+
+# Harbor configuration
+harbor:
+  core:
+    replicaCount: 1
+    image: goharbor/harbor-core:v2.12.2
+    storage:
+      size: 5Gi
+    service:
+      type: LoadBalancer
+      port: 80
+  portal:
+    replicaCount: 1
+    image: goharbor/harbor-portal:v2.12.2
+    service:
+      type: ClusterIP
+      port: 80
+  jobservice:
+    replicaCount: 1
+    image: goharbor/harbor-jobservice:v2.12.2
+    storage:
+      size: 5Gi
+
+# Registry configuration
+registry:
+  replicaCount: 1
+  image: goharbor/registry-photon:v2.12.2
+  storage:
+    size: 5Gi
+  service:
+    type: ClusterIP
+    port: 5000
+
+# Redis configuration
+redis:
+  replicaCount: 1
+  image: redis:6.2
+  storage:
+    size: 2Gi
+
+# Trivy configuration
+trivy:
+  replicaCount: 1
+  image: aquasec/trivy:0.37.0
+  storage:
+    size: 5Gi
+
+# PostgreSQL configuration
+postgresql:
+  replicaCount: 1
+  image: postgres:15
+  storage:
+    size: 10Gi
+  service:
+    type: ClusterIP
+    port: 5432
+
+# SSL Configuration
+tls:
+  secretName: harbor-ssl-secret
+  crt: ""
+  key: ""
