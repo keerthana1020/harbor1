@@ -1,5 +1,15 @@
 apiVersion: v1
- kind: ConfigMap
- metadata:
+kind: ConfigMap
+metadata:
   name: harbor-config
   namespace: harbor1
+data:
+  APP_MODE: "production"
+  LOG_LEVEL: "info"
+  CORE_URL: "http://harbor-core"
+  JOBSERVICE_URL: "http://jobservice:8080"
+  REGISTRY_URL: "http://registry:5000"
+  TRIVY_URL: "http://trivy:8080"
+  DATABASE_URL: "postgres://harbor:password@postgresql:5432/harbor"
+  REDIS_URL: "redis://redis:6379/0"
+  PORTAL_URL: "http://portal"
