@@ -4,7 +4,7 @@ metadata:
   name: redis-pvc
   namespace: harbor1
 spec:
-  storageClassName: gp3-csi
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:
