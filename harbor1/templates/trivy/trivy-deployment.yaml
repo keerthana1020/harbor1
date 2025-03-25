@@ -1,19 +1,23 @@
- apiVersion: apps/v1
-    kind: Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trivy
+  namespace: harbor1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trivy
+  template:
     metadata:
-      name: trivy
+      labels:
+        app: trivy
     spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app: trivy
-      template:
-        metadata:
-          labels:
-            app: trivy
-        spec:
-          containers:
-            - name: trivy
-              image: aquasec/trivy:0.37.0
-              ports:
-                - containerPort: 8080
+      containers:
+        - name: trivy
+          image: aquasec/trivy:0.37.0
+          ports:
+            - containerPort: 8080
+          args:
+            - "server"  # Run Trivy in server mode
+            - "--listen=0.0.0.0:8080"
