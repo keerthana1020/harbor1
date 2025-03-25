@@ -2,6 +2,7 @@
     kind: PersistentVolumeClaim
     metadata:
       name: harbor-core-pvc
+      namespace: harbor1
     spec:
       storageClassName: gp3-csi
       accessModes:
