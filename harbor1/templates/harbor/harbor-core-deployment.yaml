@@ -1,19 +1,25 @@
 apiVersion: apps/v1
-    kind: Deployment
+kind: Deployment
+metadata:
+  name: harbor-core
+  namespace: harbor1
+  labels:
+    app: harbor-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor-core
+  template:
     metadata:
-      name: harbor-core
+      labels:
+        app: harbor-core
     spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app: harbor-core
-      template:
-        metadata:
-          labels:
-            app: harbor-core
-        spec:
-          containers:
-            - name: harbor-core
-              image: goharbor/harbor-core:v2.12.2
-              ports:
-                - containerPort: 80
+      containers:
+        - name: harbor-core
+          image: goharbor/harbor-core:v2.12.2
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: harbor-config
