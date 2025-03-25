@@ -1,11 +1,12 @@
-  apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: postgresql-pvc
-    spec:
-      storageClassName: gp3-csi
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 10Gi
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-pvc
+  namespace: harbor1
+spec:
+  storageClassName: gp3-csi
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
