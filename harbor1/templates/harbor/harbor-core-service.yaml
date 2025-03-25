@@ -2,6 +2,7 @@
     kind: Service
     metadata:
       name: harbor-core
+      namespace: harbor1
     spec:
       type: {{ .Values.serviceType }}
       ports:
