@@ -1,19 +1,20 @@
- apiVersion: apps/v1
-    kind: Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobservice
+  namespace: harbor1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobservice
+  template:
     metadata:
-      name: jobservice
+      labels:
+        app: jobservice
     spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app: jobservice
-      template:
-        metadata:
-          labels:
-            app: jobservice
-        spec:
-          containers:
-            - name: jobservice
-              image: goharbor/harbor-jobservice:v2.12.2
-              ports:
-                - containerPort: 8080
+      containers:
+        - name: jobservice
+          image: goharbor/harbor-jobservice:v2.12.2
+          ports:
+            - containerPort: 8080
