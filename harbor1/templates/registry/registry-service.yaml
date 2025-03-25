@@ -4,7 +4,7 @@ metadata:
   name: registry-pv
   namespace: harbor1
 spec:
-  storageClassName: gp2-csi
+  storageClassName: gp2
   capacity:
     storage: 5Gi
   accessModes:
