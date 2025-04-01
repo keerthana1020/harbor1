@@ -1,13 +1,20 @@
 apiVersion: v1
-kind: PersistentVolume
+kind: Service
 metadata:
-  name: registry-pv
+  name: registry
   namespace: harbor1
+  labels:
+    app: registry
 spec:
-  storageClassName: gp2-csi
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: /data/registry
+  selector:
+    app: registry
+  ports:
+    - name: registry
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+    - name: registry-metrics
+      port: 5001
+      targetPort: 5001
+      protocol: TCP
+  type: ClusterIP
