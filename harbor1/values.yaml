@@ -12,13 +12,14 @@ harbor:
       size: 5Gi
     service:
       type: LoadBalancer
-      port: 80
+      port: 80  # Core can stay on 80 (typically runs as root)
   portal:
     replicaCount: 1
     image: goharbor/harbor-portal:v2.12.2
+    containerPort: 8080  # Changed from 80 to avoid permission issues
     service:
       type: ClusterIP
-      port: 80
+      port: 8080  # Match containerPort
   jobservice:
     replicaCount: 1
     image: goharbor/harbor-jobservice:v2.12.2
