@@ -1,6 +1,6 @@
 # Global configuration
 global:
-  storageClass: gp3-csi
+  storageClass: gp2-csi
   serviceType: LoadBalancer
 
 # Harbor configuration
