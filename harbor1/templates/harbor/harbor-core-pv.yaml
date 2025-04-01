@@ -4,7 +4,7 @@ metadata:
   name: harbor-core-pv
   namespace: harbor1
 spec:
-  storageClassName: gp2
+  storageClassName: gp2-csi
   capacity:
     storage: 5Gi
   accessModes:
