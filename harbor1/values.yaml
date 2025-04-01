@@ -27,18 +27,35 @@ harbor:
           secret:
             secretName: "harbor-ssl-secret"
 
-  # Portal Configuration
-  portal:
-    replicaCount: 1
-    image: "goharbor/harbor-portal:v2.12.2"
-    containerPort: 8080
-    securityContext:
-      runAsUser: 10000
-      fsGroup: 10000
-    service:
-      type: "LoadBalancer"
-      port: 80
-      targetPort: 8080
+ portal:
+  enabled: true
+  image:
+    repository: goharbor/harbor-portal
+    tag: v2.12.2
+  
+  # ADD THESE LINES TO FIX PERMISSION ISSUES:
+  securityContext:
+    runAsUser: 10000  # Harbor's non-root user ID
+    runAsGroup: 10000
+    fsGroup: 10000
+    fsGroupChangePolicy: "OnRootMismatch"
+  
+  # Configure emptyDir for nginx.pid
+  volumeMounts:
+    - name: nginx-pid
+      mountPath: /var/run/nginx.pid
+      subPath: nginx.pid
+  
+  volumes:
+    - name: nginx-pid
+      emptyDir: {}
+  
+  # Run on port 8080 to avoid root requirements
+  containerPort: 8080
+  
+  # Add AppArmor annotation
+  podAnnotations:
+    container.apparmor.security.beta.kubernetes.io/portal: runtime/default
 
   # Registry Configuration - COMPLETE FIX
   registry:
