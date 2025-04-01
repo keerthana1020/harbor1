@@ -15,48 +15,32 @@ harbor:
     service:
       type: "LoadBalancer"
       port: 80
+    # Add these to core configuration
+    secretKey: "your-secure-secret-key"  # Generate with: openssl rand -hex 16
+    tls:
+      existingSecret: "harbor-ssl-secret"
+      volumeMounts:
+        - name: "core-certs"
+          mountPath: "/etc/harbor/ssl"
+      volumes:
+        - name: "core-certs"
+          secret:
+            secretName: "harbor-ssl-secret"
 
-  # Portal Configuration - Fixed
+  # Portal Configuration
   portal:
     replicaCount: 1
     image: "goharbor/harbor-portal:v2.12.2"
-    containerPort: 8080  # Running on high port
-    
-    # Security Context
+    containerPort: 8080
     securityContext:
-      runAsUser: 10000  # Harbor's non-root user
+      runAsUser: 10000
       fsGroup: 10000
-    
-    # Resources
-    resources:
-      requests:
-        memory: "256Mi"
-        cpu: "100m"
-      limits:
-        memory: "512Mi"
-        cpu: "500m"
-    
-    # Health Checks
-    livenessProbe:
-      httpGet:
-        path: /
-        port: 8080
-      initialDelaySeconds: 30
-      periodSeconds: 10
-    readinessProbe:
-      httpGet:
-        path: /
-        port: 8080
-      initialDelaySeconds: 5
-      periodSeconds: 5
-    
-    # Service
     service:
       type: "LoadBalancer"
       port: 80
       targetPort: 8080
 
-  # Registry Configuration - Fixed
+  # Registry Configuration - COMPLETE FIX
   registry:
     enabled: true
     replicaCount: 1
@@ -68,31 +52,34 @@ harbor:
       filesystem:
         rootdirectory: "/storage"
     
-    # Configuration
+    # Configuration - Fixes missing config.yml
     config:
       enabled: true
       data:
         version: 0.1
         log:
           level: "info"
+          formatter: "text"
         storage:
           filesystem:
             rootdirectory: "/storage"
         http:
           addr: ":5000"
-          secret: "change-me-to-a-real-secret"
+          secret: "your-registry-secret"  # Change this
         auth:
           token:
             issuer: "harbor-token-issuer"
             realm: "https://core.harbor.local/service/token"
             rootcertbundle: "/etc/registry/root.crt"
     
-    # TLS
+    # TLS - Fixes missing /etc/harbor/ssl
     tls:
       enabled: true
       existingSecret: "harbor-ssl-secret"
+      cert: "/etc/harbor/ssl/tls.crt"
+      key: "/etc/harbor/ssl/tls.key"
     
-    # Volumes
+    # Volume Mounts
     volumeMounts:
       - name: "registry-config"
         mountPath: "/etc/registry/config.yml"
@@ -108,6 +95,7 @@ harbor:
       - name: "registry-certs"
         secret:
           secretName: "harbor-ssl-secret"
+          optional: false  # Ensures pod fails if certs are missing
 
 # Database
 postgresql:
