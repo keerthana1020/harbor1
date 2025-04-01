@@ -3,7 +3,7 @@ global:
   storageClass: "gp2-csi"
   serviceType: "LoadBalancer"
 
-# Harbor Core
+# Harbor Core - COMPLETE FIX
 harbor:
   core:
     replicaCount: 1
@@ -13,55 +13,81 @@ harbor:
     service:
       type: "LoadBalancer"
       port: 80
-    secretKey: "your-secure-secret-key"  # Generate with: openssl rand -hex 16
-    tls:
-      existingSecret: "harbor-ssl-secret"
-      volumeMounts:
-        - name: "core-certs"
-          mountPath: "/etc/harbor/ssl"
-      volumes:
-        - name: "core-certs"
-          secret:
-            secretName: "harbor-ssl-secret"
+    
+    # Critical Fixes for Core
+    secretKey: "$(openssl rand -hex 16)"  # Generate during install
+    secretName: "harbor-core-secrets"
+    
+    # Database Connection
+    env:
+      POSTGRESQL_HOST: "harbor-database"
+      POSTGRESQL_PORT: "5432"
+      POSTGRESQL_USERNAME: "postgres"
+      POSTGRESQL_PASSWORD: "$(openssl rand -hex 12)"  # Generate during install
+      POSTGRESQL_DATABASE: "registry"
+      POSTGRESQL_SSLMODE: "disable"
+      
+      # Redis Connection
+      REDIS_HOST: "harbor-redis"
+      REDIS_PORT: "6379"
+      
+      # Registry Connection
+      REGISTRY_URL: "http://harbor-registry:5000"
+    
+    # Health Checks
+    livenessProbe:
+      httpGet:
+        path: /api/ping
+        port: 8080
+      initialDelaySeconds: 120  # Increased for DB initialization
+      periodSeconds: 30
+    readinessProbe:
+      httpGet:
+        path: /api/ping
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 15
+    
+    # Resources
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "300m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
 
-# Portal
+# Portal (unchanged from your working version)
 portal:
   enabled: true
   image:
     repository: goharbor/harbor-portal
     tag: v2.12.2
-  
   securityContext:
     runAsUser: 10000
     runAsGroup: 10000
     fsGroup: 10000
     fsGroupChangePolicy: "OnRootMismatch"
-
   volumeMounts:
     - name: nginx-pid
       mountPath: /var/run/nginx.pid
       subPath: nginx.pid
-  
   volumes:
     - name: nginx-pid
       emptyDir: {}
-
-  containerPort: 8080  # Runs as non-root
-
+  containerPort: 8080
   podAnnotations:
     container.apparmor.security.beta.kubernetes.io/portal: runtime/default
 
-# Registry
+# Registry (unchanged from your working version)
 registry:
   enabled: true
   replicaCount: 1
   image: "goharbor/registry-photon:v2.12.2"
-  
   storage:
     size: "5Gi"
     filesystem:
       rootdirectory: "/storage"
-
   config:
     enabled: true
     data:
@@ -74,19 +100,15 @@ registry:
           rootdirectory: "/storage"
       http:
         addr: ":5000"
-        secret: "your-registry-secret"
+        secret: "$(openssl rand -hex 16)"  # Generate during install
       auth:
         token:
           issuer: "harbor-token-issuer"
           realm: "https://core.harbor.local/service/token"
           rootcertbundle: "/etc/registry/root.crt"
-
   tls:
     enabled: true
     existingSecret: "harbor-ssl-secret"
-    cert: "/etc/harbor/ssl/tls.crt"
-    key: "/etc/harbor/ssl/tls.key"
-
   volumeMounts:
     - name: "registry-config"
       mountPath: "/etc/registry/config.yml"
@@ -94,7 +116,6 @@ registry:
     - name: "registry-certs"
       mountPath: "/etc/harbor/ssl"
       readOnly: true
-
   volumes:
     - name: "registry-config"
       configMap:
@@ -104,21 +125,42 @@ registry:
         secretName: "harbor-ssl-secret"
         optional: false
 
-# Database (PostgreSQL)
+# Database - Enhanced Configuration
 postgresql:
   enabled: true
   replicaCount: 1
   image: "postgres:15"
-  storage:
+  postgresqlUsername: "postgres"
+  postgresqlPassword: "$(openssl rand -hex 12)"  # Generate during install
+  postgresqlDatabase: "registry"
+  persistence:
     size: "10Gi"
+    storageClass: "gp2-csi"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "300m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
 
-# Redis
+# Redis - Enhanced Configuration
 redis:
   enabled: true
   replicaCount: 1
   image: "redis:6.2"
-  storage:
+  auth:
+    enabled: false  # Harbor doesn't use Redis auth
+  persistence:
     size: "2Gi"
+    storageClass: "gp2-csi"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
 
 # Trivy
 trivy:
@@ -153,9 +195,8 @@ persistence:
       storageClass: "gp2-csi"
       accessMode: "ReadWriteOnce"
       size: "5Gi"
-      
+
 # SSL Configuration
 tls:
   secretName: harbor-ssl-secret
-  crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURHekNDQWdPZ0F3SUJBZ0lVTEZQaGhZN1M2RGpkaFJ2Uk1YdWpVMFYrK084d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0hURWJNQmtHQTFVRUF3d1NhR0Z5WW05eUxtVjRZVzF3YkdVdVkyOXRNQjRYRFRJMU1ETXlNVEEyTXpNeApORm9YRFRJMk1ETXlNVEEyTXpNeE5Gb3dIVEViTUJrR0ExVUVBd3dTYUdGeVltOXlMbVY0WVcxd2JHVXVZMjl0Ck1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBbC91dzVzOEgxRDB3eVhsOWRZMnIKbTYxZ0p5NEhqN3NjK01rWmxkbTUxRFNNbGtGZmp2WTJXL0dPVnZuMDkzUGI4QjU1dFpLNVRKSGtsWEhBUkFMeQpEZzhmUTVxQjFFQVRpOE5FZXhKRVc1L1V3VkNtWGdZbnNkNlhzTDgvRUxDbUY3VDVxcW9jTVk3OFNySXh2UXJFCmUvN1FKakNrRFd5RGVRZkdaMUM0amVnUDhtakp1eG9HdlJRZ0Z6Mk5DbEFqb05FelRhL1pDTGFnRDY5TzFwSGUKdDQvdXlkTzM2bzMrbjArVm5XTTlzWFA2akloVTh3K0c4enNXZVB2eUZQNmtZeTEwYnpDR3FVTHFZNDE1VDJIRAp5b3lqaGZkTWdVSndDL2NwcXFrTms0NVpOdW9ZUHFYOHo3OURJbEhJWkNnSHZIRndickxtQURQZVE1L200ejFnClZ3SURBUUFCbzFNd1VUQWRCZ05WSFE0RUZnUVU0TXRhT016SHZSTDNSRElBTFBWMUUxTnVncGN3SHdZRFZSMGoKQkJnd0ZvQVU0TXRhT016SHZSTDNSRElBTFBWMUUxTnVncGN3RHdZRFZSMFRBUUgvQkFVd0F3RUIvekFOQmdrcQpoa2lHOXcwQkFRc0ZBQU9DQVFFQWxDaSt1UFZPYjVpc21OTzNMUFBjTlFWbnJOS2JncW9WaHZUbSsydlUzeWJJCkV5UEdZb3ZKcStCSHF0VFRSMlU5WXhZMXQ4U0d1enZtQWI0UHdSY1NtSzdZdDFaTmI4Z2U5czFzYTB6aHBmMmIKeDM0RmFrQk0xbmZUcDIrcVdYZ05HaUx0K3hLc1Fiak1ieE5DcjBHQ0VQWnplRmd6U1A3eVAzSjJ1dDRpbVNnRQpzRTFmdHRibGIxQlRTRkhhcXBrWnpmSVNBRjZlM3VTbTF5SkxNeVBrL1lqL09UbTVxeWpHU0JmdGVBRmpRYlZOCit4OTRZZ1h5eThSM1BpZTE4Y3ZWTEUwK2dETzJtbjcwVnNGRjI4TXJWVmlHTDZBWHY3UEtwbXVuSTBrTEpsbXoKd0xjMllpSnJWY09zWXNhZ2Y0ZzVWVlRoT0hFbjNjK1hsbHhMM2JrOEt3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo
-  key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ1grN0RtendmVVBUREoKZVgxMWphdWJyV0FuTGdlUHV4ejR5Um1WMmJuVU5JeVdRVitPOWpaYjhZNVcrZlQzYzl2d0hubTFrcmxNa2VTVgpjY0JFQXZJT0R4OURtb0hVUUJPTHcwUjdFa1JibjlUQlVLWmVCaWV4M3Bld3Z6OFFzS1lYdFBtcXFod3hqdnhLCnNqRzlDc1I3L3RBbU1LUU5iSU41QjhablVMaU42QS95YU1tN0dnYTlGQ0FYUFkwS1VDT2cwVE5OcjlrSXRxQVAKcjA3V2tkNjNqKzdKMDdmcWpmNmZUNVdkWXoyeGMvcU1pRlR6RDRiek94WjQrL0lVL3FSakxYUnZNSWFwUXVwagpqWGxQWWNQS2pLT0Y5MHlCUW5BTDl5bXFxUTJUamxrMjZoZytwZnpQdjBNaVVjaGtLQWU4Y1hCdXN1WUFNOTVECm4rYmpQV0JYQWdNQkFBRUNnZ0VBRnRDVGw3SlFiSTNhK3dPZno3dTZuUjREcHg0RHlKSEFJYUNlbEo0Z2hUaDIKT2tBS0JqM3pudzI5M2xTYmIySVhEQTZuR3BpeDlFcWFVOHpGbmZBTFFnMEhGbkRsT0dWK0NhY0FhckV0VGN2SwpkbEtUQnQ1SnF5dk0vWjFYN0R0NFUycTVaK010WkVzZ21GM3psWHMrVDViS3pGRFU3NmJ3ZllTclJlc2FLVU1ICmQ2OXduQXZoYzU4dHJjSzZHa2xrRjJqUkR1Q3l3NE5lQ3JvZ05Za1VFaHZ4SmxtVlJVOTlXUkVVQjhaRVN5ZVQKS0VPbFBNVDJNZTZvWDM5Zkw1cldxOFRUZTJhTDRNOTVmckhrenRLNnBySDY2eS9DN0JrMzh0YWJ4NjBUVng3WQowNzZlZDFkZUN1c0djRWtsVHA2T1Z1R3NTSXFubkRxS2V2K09XakFod1FLQmdRRFMwdUl4VjJuYXFuSnZMcjlJCkpDb3Fwc1ZYWEJDcGRneTgxbU81K0hwQUE2WldSUmx1OUhkbUJFZXFPYm5hRXRLdTEzNzNhS25raGxiemM4MEMKaEduRjVkdm01WVZlWW5jUmdlZWZBdWdhM041T0lsRmtGNk43TGVUaFNUcmxaQjd2TE5RZ0Q0aWlNMXdWeDQ5MQpTVVhsbVhnLzlxdEFuNW4rZHYzTUdpK25zUUtCZ1FDNGpRQTJXb1FOZkFDaXg3SU9PallMUm13RnkyQmhEM1dsCjNNOXZNbmtBdUppVmZnd04rU09XK2srTjVkQlF5NHZ6
+  # Remove hardcoded certs - use kubectl create secret instead
