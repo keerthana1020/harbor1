@@ -25,8 +25,8 @@ harbor:
       volumes:
         - name: "core-certs"
           secret:
-            secretName: "harbor-ssl-secret"
-
+            secretName: "harbor-ssl-secret
+ # portal
  portal:
   enabled: true
   image:
