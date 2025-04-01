@@ -1,5 +1,3 @@
-# values.yaml - Complete Fixed Configuration
-
 # Global Settings
 global:
   storageClass: "gp2-csi"
@@ -15,7 +13,6 @@ harbor:
     service:
       type: "LoadBalancer"
       port: 80
-    # Add these to core configuration
     secretKey: "your-secure-secret-key"  # Generate with: openssl rand -hex 16
     tls:
       existingSecret: "harbor-ssl-secret"
@@ -25,22 +22,21 @@ harbor:
       volumes:
         - name: "core-certs"
           secret:
-            secretName: "harbor-ssl-secret
- # portal
- portal:
+            secretName: "harbor-ssl-secret"
+
+# Portal
+portal:
   enabled: true
   image:
     repository: goharbor/harbor-portal
     tag: v2.12.2
   
-  # ADD THESE LINES TO FIX PERMISSION ISSUES:
   securityContext:
-    runAsUser: 10000  # Harbor's non-root user ID
+    runAsUser: 10000
     runAsGroup: 10000
     fsGroup: 10000
     fsGroupChangePolicy: "OnRootMismatch"
-  
-  # Configure emptyDir for nginx.pid
+
   volumeMounts:
     - name: nginx-pid
       mountPath: /var/run/nginx.pid
@@ -49,72 +45,66 @@ harbor:
   volumes:
     - name: nginx-pid
       emptyDir: {}
-  
-  # Run on port 8080 to avoid root requirements
-  containerPort: 8080
-  
-  # Add AppArmor annotation
+
+  containerPort: 8080  # Runs as non-root
+
   podAnnotations:
     container.apparmor.security.beta.kubernetes.io/portal: runtime/default
 
-  # Registry Configuration - COMPLETE FIX
-  registry:
-    enabled: true
-    replicaCount: 1
-    image: "goharbor/registry-photon:v2.12.2"
-    
-    # Storage
-    storage:
-      size: "5Gi"
-      filesystem:
-        rootdirectory: "/storage"
-    
-    # Configuration - Fixes missing config.yml
-    config:
-      enabled: true
-      data:
-        version: 0.1
-        log:
-          level: "info"
-          formatter: "text"
-        storage:
-          filesystem:
-            rootdirectory: "/storage"
-        http:
-          addr: ":5000"
-          secret: "your-registry-secret"  # Change this
-        auth:
-          token:
-            issuer: "harbor-token-issuer"
-            realm: "https://core.harbor.local/service/token"
-            rootcertbundle: "/etc/registry/root.crt"
-    
-    # TLS - Fixes missing /etc/harbor/ssl
-    tls:
-      enabled: true
-      existingSecret: "harbor-ssl-secret"
-      cert: "/etc/harbor/ssl/tls.crt"
-      key: "/etc/harbor/ssl/tls.key"
-    
-    # Volume Mounts
-    volumeMounts:
-      - name: "registry-config"
-        mountPath: "/etc/registry/config.yml"
-        subPath: "config.yml"
-      - name: "registry-certs"
-        mountPath: "/etc/harbor/ssl"
-        readOnly: true
-    
-    volumes:
-      - name: "registry-config"
-        configMap:
-          name: "harbor-registry-config"
-      - name: "registry-certs"
-        secret:
-          secretName: "harbor-ssl-secret"
-          optional: false  # Ensures pod fails if certs are missing
+# Registry
+registry:
+  enabled: true
+  replicaCount: 1
+  image: "goharbor/registry-photon:v2.12.2"
+  
+  storage:
+    size: "5Gi"
+    filesystem:
+      rootdirectory: "/storage"
 
-# Database
+  config:
+    enabled: true
+    data:
+      version: 0.1
+      log:
+        level: "info"
+        formatter: "text"
+      storage:
+        filesystem:
+          rootdirectory: "/storage"
+      http:
+        addr: ":5000"
+        secret: "your-registry-secret"
+      auth:
+        token:
+          issuer: "harbor-token-issuer"
+          realm: "https://core.harbor.local/service/token"
+          rootcertbundle: "/etc/registry/root.crt"
+
+  tls:
+    enabled: true
+    existingSecret: "harbor-ssl-secret"
+    cert: "/etc/harbor/ssl/tls.crt"
+    key: "/etc/harbor/ssl/tls.key"
+
+  volumeMounts:
+    - name: "registry-config"
+      mountPath: "/etc/registry/config.yml"
+      subPath: "config.yml"
+    - name: "registry-certs"
+      mountPath: "/etc/harbor/ssl"
+      readOnly: true
+
+  volumes:
+    - name: "registry-config"
+      configMap:
+        name: "harbor-registry-config"
+    - name: "registry-certs"
+      secret:
+        secretName: "harbor-ssl-secret"
+        optional: false
+
+# Database (PostgreSQL)
 postgresql:
   enabled: true
   replicaCount: 1
@@ -151,6 +141,19 @@ persistence:
       storageClass: "gp2-csi"
       accessMode: "ReadWriteOnce"
       size: "20Gi"
+    database:
+      storageClass: "gp2-csi"
+      accessMode: "ReadWriteOnce"
+      size: "10Gi"
+    redis:
+      storageClass: "gp2-csi"
+      accessMode: "ReadWriteOnce"
+      size: "2Gi"
+    trivy:
+      storageClass: "gp2-csi"
+      accessMode: "ReadWriteOnce"
+      size: "5Gi"
+      
 # SSL Configuration
 tls:
   secretName: harbor-ssl-secret
