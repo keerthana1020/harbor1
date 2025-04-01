@@ -1,3 +1,5 @@
+# values.yaml - Fixed Registry Configuration
+
 # Global configuration
 global:
   storageClass: gp2-csi
@@ -26,27 +28,79 @@ harbor:
     storage:
       size: 5Gi
 
-# Registry configuration - FIXED
+# Registry configuration - COMPLETE FIX
 registry:
+  enabled: true
   replicaCount: 1
-  image: goharbor/registry-photon:v2.12.2
+  image:
+    repository: goharbor/registry-photon
+    tag: v2.12.2
+  
+  # Storage Configuration
   storage:
     size: 5Gi
+    filesystem:
+      rootdirectory: /storage
+  
+  # Service Configuration
   service:
     type: ClusterIP
     port: 5000
-  # Critical fixes for missing config/SSL:
-  secret:
-    enabled: true
+  
+  # Configuration File Fix
   config:
-    enabled: true  # Auto-generates config.yml
+    enabled: true
+    # Explicit registry configuration
+    data:
+      version: 0.1
+      log:
+        level: info
+        formatter: text
+      storage:
+        filesystem:
+          rootdirectory: /storage
+      http:
+        addr: :5000
+        secret: "change-me-to-a-real-secret"
+      auth:
+        token:
+          issuer: "harbor-token-issuer"
+          realm: "https://core.harbor.local/service/token"
+          rootcertbundle: /etc/registry/root.crt
+  
+  # SSL/TLS Fix
+  tls:
+    enabled: true
+    existingSecret: harbor-ssl-secret
+    cert: /etc/harbor/ssl/tls.crt
+    key: /etc/harbor/ssl/tls.key
+  
+  # Volume Mounts Fix
   volumeMounts:
-    - name: certs
+    - name: registry-config
+      mountPath: /etc/registry/config.yml
+      subPath: config.yml
+    - name: registry-certs
       mountPath: /etc/harbor/ssl
+      readOnly: true
+  
   volumes:
-    - name: certs
+    - name: registry-config
+      configMap:
+        name: harbor-registry-config
+    - name: registry-certs
       secret:
         secretName: harbor-ssl-secret
+  
+  # Health Checks
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
 
 # Redis configuration
 redis:
@@ -58,7 +112,7 @@ redis:
 # Trivy configuration
 trivy:
   replicaCount: 1
-  image: aquasec/trivy:0.60.0
+  image: aquasec/trivy:0.37.0
   storage:
     size: 5Gi
 
