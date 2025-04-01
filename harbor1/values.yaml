@@ -1,130 +1,151 @@
-# values.yaml - Fixed Registry Configuration
+# values.yaml - Complete Fixed Configuration
 
-# Global configuration
+# Global Settings
 global:
-  storageClass: gp2-csi
-  serviceType: LoadBalancer
+  storageClass: "gp2-csi"
+  serviceType: "LoadBalancer"
 
-# Harbor configuration
+# Harbor Core
 harbor:
   core:
     replicaCount: 1
-    image: goharbor/harbor-core:v2.12.2
+    image: "goharbor/harbor-core:v2.12.2"
     storage:
-      size: 5Gi
+      size: "5Gi"
     service:
-      type: LoadBalancer
+      type: "LoadBalancer"
       port: 80
+
+  # Portal Configuration - Fixed
   portal:
     replicaCount: 1
-    image: goharbor/harbor-portal:v2.12.2
-    containerPort: 8080
+    image: "goharbor/harbor-portal:v2.12.2"
+    containerPort: 8080  # Running on high port
+    
+    # Security Context
+    securityContext:
+      runAsUser: 10000  # Harbor's non-root user
+      fsGroup: 10000
+    
+    # Resources
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    
+    # Health Checks
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    
+    # Service
     service:
-      type: ClusterIP
-      port: 8080
-  jobservice:
-    replicaCount: 1
-    image: goharbor/harbor-jobservice:v2.12.2
-    storage:
-      size: 5Gi
+      type: "LoadBalancer"
+      port: 80
+      targetPort: 8080
 
-# Registry configuration - COMPLETE FIX
-registry:
+  # Registry Configuration - Fixed
+  registry:
+    enabled: true
+    replicaCount: 1
+    image: "goharbor/registry-photon:v2.12.2"
+    
+    # Storage
+    storage:
+      size: "5Gi"
+      filesystem:
+        rootdirectory: "/storage"
+    
+    # Configuration
+    config:
+      enabled: true
+      data:
+        version: 0.1
+        log:
+          level: "info"
+        storage:
+          filesystem:
+            rootdirectory: "/storage"
+        http:
+          addr: ":5000"
+          secret: "change-me-to-a-real-secret"
+        auth:
+          token:
+            issuer: "harbor-token-issuer"
+            realm: "https://core.harbor.local/service/token"
+            rootcertbundle: "/etc/registry/root.crt"
+    
+    # TLS
+    tls:
+      enabled: true
+      existingSecret: "harbor-ssl-secret"
+    
+    # Volumes
+    volumeMounts:
+      - name: "registry-config"
+        mountPath: "/etc/registry/config.yml"
+        subPath: "config.yml"
+      - name: "registry-certs"
+        mountPath: "/etc/harbor/ssl"
+        readOnly: true
+    
+    volumes:
+      - name: "registry-config"
+        configMap:
+          name: "harbor-registry-config"
+      - name: "registry-certs"
+        secret:
+          secretName: "harbor-ssl-secret"
+
+# Database
+postgresql:
   enabled: true
   replicaCount: 1
-  image:
-    repository: goharbor/registry-photon
-    tag: v2.12.2
-  
-  # Storage Configuration
+  image: "postgres:15"
   storage:
-    size: 5Gi
-    filesystem:
-      rootdirectory: /storage
-  
-  # Service Configuration
-  service:
-    type: ClusterIP
-    port: 5000
-  
-  # Configuration File Fix
-  config:
-    enabled: true
-    # Explicit registry configuration
-    data:
-      version: 0.1
-      log:
-        level: info
-        formatter: text
-      storage:
-        filesystem:
-          rootdirectory: /storage
-      http:
-        addr: :5000
-        secret: "change-me-to-a-real-secret"
-      auth:
-        token:
-          issuer: "harbor-token-issuer"
-          realm: "https://core.harbor.local/service/token"
-          rootcertbundle: /etc/registry/root.crt
-  
-  # SSL/TLS Fix
-  tls:
-    enabled: true
-    existingSecret: harbor-ssl-secret
-    cert: /etc/harbor/ssl/tls.crt
-    key: /etc/harbor/ssl/tls.key
-  
-  # Volume Mounts Fix
-  volumeMounts:
-    - name: registry-config
-      mountPath: /etc/registry/config.yml
-      subPath: config.yml
-    - name: registry-certs
-      mountPath: /etc/harbor/ssl
-      readOnly: true
-  
-  volumes:
-    - name: registry-config
-      configMap:
-        name: harbor-registry-config
-    - name: registry-certs
-      secret:
-        secretName: harbor-ssl-secret
-  
-  # Health Checks
-  livenessProbe:
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-  readinessProbe:
-    initialDelaySeconds: 5
-    periodSeconds: 10
-    timeoutSeconds: 5
+    size: "10Gi"
 
-# Redis configuration
+# Redis
 redis:
+  enabled: true
   replicaCount: 1
-  image: redis:6.2
+  image: "redis:6.2"
   storage:
-    size: 2Gi
+    size: "2Gi"
 
-# Trivy configuration
+# Trivy
 trivy:
+  enabled: true
   replicaCount: 1
-  image: aquasec/trivy:0.60.0
+  image: "aquasec/trivy:0.37.0"
   storage:
-    size: 5Gi
+    size: "5Gi"
 
-# PostgreSQL configuration
-postgresql:
-  replicaCount: 1
-  image: postgres:15
-  storage:
-    size: 10Gi
-  service:
-    type: ClusterIP
-    port: 5432
+# PVC Configuration
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      storageClass: "gp2-csi"
+      accessMode: "ReadWriteOnce"
+      size: "50Gi"
+    portal:
+      storageClass: "gp2-csi"
+      accessMode: "ReadWriteOnce"
+      size: "20Gi"
 # SSL Configuration
 tls:
   secretName: harbor-ssl-secret
