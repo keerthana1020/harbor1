@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: portal-pvc
-  namespace: harborlast
+  namespace: harbor1
 spec:
   storageClassName: gp2-csi
   accessModes:
