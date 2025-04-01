@@ -1,0 +1,14 @@
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx  # Use "alb", "gce", etc., if not on NGINX
+  hosts:
+    core: harbor.cloudmasa.com  # Your actual domain
+  annotations:
+    kubernetes.io/ingress.class: nginx  # Legacy annotation (className takes precedence)
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"  # Allow large uploads
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"  # Enforce HTTPS
+  tls:
+    - secretName: harbor-ssl-secret  # Matches your existing TLS secret
+      hosts:
+        - harbor.cloudmasa.com  # Must match the domain above!
