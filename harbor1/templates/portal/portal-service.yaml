@@ -1,3 +1,4 @@
+# portal-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +7,9 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 8080
+      protocol: TCP
   selector:
     app: portal
