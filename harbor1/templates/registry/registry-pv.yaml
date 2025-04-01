@@ -5,7 +5,7 @@ metadata:
 spec:
   storageClassName: gp2-csi
   capacity:
-    storage: 5Gi
+    storage: 50Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
