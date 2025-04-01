@@ -1,3 +1,4 @@
+# portal-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,14 +14,43 @@ spec:
       labels:
         app: portal
     spec:
+      securityContext:
+        runAsUser: 10000  # Harbor's non-root user
+        fsGroup: 10000
       containers:
         - name: portal
           image: goharbor/harbor-portal:v2.12.2
           ports:
-            - containerPort: 8080  # The Harbor Portal listens on port 8080
-          securityContext:
-            capabilities:
-              add: ["NET_BIND_SERVICE"]  # Allows binding to port 80 as non-root
-          envFrom:
-            - configMapRef:
-                name: portal-config
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: storage
+              mountPath: /usr/share/nginx/html
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: portal-config
+        - name: storage
+          persistentVolumeClaim:
+            claimName: portal-pvc
