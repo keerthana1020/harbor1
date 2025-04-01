@@ -15,7 +15,7 @@ spec:
           service:
             name: harbor-core
             port:
-              number: 80
+              number: 8080
   tls:
   - hosts:
     - harbor.cloudmasa.com
