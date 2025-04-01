@@ -20,10 +20,7 @@ metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: |
       {"apiVersion":"v1","data":{"APP_MODE":"production","CACHE_ENABLED":"true","CACHE_EXPIRE_HOURS":"24","CACHE_REDIS_HOST":"redis","CACHE_REDIS_NAMESPACE":"harbor_cache","CACHE_REDIS_PORT":"6379","CACHE_TYPE":"redis","CORE_URL":"http://harbor-core","DATABASE_URL":"postgres://harbor:password@postgresql:5432/harbor","JOBSERVICE_URL":"http://jobservice:8080","LOG_LEVEL":"info","PORTAL_URL":"http://portal","REDIS_URL":"redis://redis:6379/0","REGISTRY_URL":"http://registry:5000","TRIVY_URL":"http://trivy:8080"},"kind":"ConfigMap","metadata":{"annotations":{},"labels":{"app.kubernetes.io/instance":"harbor1"},"name":"harbor-config","namespace":"harbor1"}}
-  creationTimestamp: "2025-04-01T06:50:22Z"
   labels:
     app.kubernetes.io/instance: harbor1
   name: harbor-config
   namespace: harbor1
-  resourceVersion: "1061265"
-  uid: 85f197a9-0278-4f96-9570-08ef0605a4a4
