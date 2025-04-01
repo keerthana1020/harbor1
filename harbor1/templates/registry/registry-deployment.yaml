@@ -18,3 +18,36 @@ spec:
           image: goharbor/registry-photon:v2.12.2
           ports:
             - containerPort: 5000
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: ":5000"
+            - name: REGISTRY_STORAGE
+              value: "filesystem"
+            - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+              value: "/var/lib/registry"
+            - name: REGISTRY_AUTH_TOKEN_REALM
+              value: "http://harbor-core.harbor1.svc.cluster.local/service/token"
+            - name: REGISTRY_AUTH_TOKEN_SERVICE
+              value: "harbor-registry"
+            - name: REGISTRY_AUTH_TOKEN_ISSUER
+              value: "harbor-token-issuer"
+            - name: REGISTRY_REDIS_ADDR
+              value: "redis:6379"
+          volumeMounts:
+            - name: registry-data
+              mountPath: "/var/lib/registry"
+            - name: registry-config
+              mountPath: "/etc/registry"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: registry-data
+          persistentVolumeClaim:
+            claimName: registry-pvc
+        - name: registry-config
+          configMap:
+            name: registry-config
