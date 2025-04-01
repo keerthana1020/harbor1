@@ -4,7 +4,7 @@ metadata:
   name: trivy-pvc
   namespace: harbor1
 spec:
-  storageClassName: gp2
+  storageClassName: gp2-csi
   accessModes:
     - ReadWriteOnce
   resources:
