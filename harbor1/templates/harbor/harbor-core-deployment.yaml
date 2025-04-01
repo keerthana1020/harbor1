@@ -23,3 +23,14 @@ spec:
           envFrom:
             - configMapRef:
                 name: harbor-config
+          env:
+            - name: CACHE_ENABLED
+              value: "true"
+            - name: CACHE_TYPE
+              value: "redis"
+            - name: CACHE_REDIS_HOST
+              value: "redis"
+            - name: CACHE_REDIS_PORT
+              value: "6379"
+            - name: CACHE_REDIS_NAMESPACE
+              value: "harbor_cache"
